@@ -3,35 +3,29 @@ import React, { useState } from 'react'
 import ReactDOM from 'react-dom/client'
 
 import { FSAResponseAreaTub } from '../src/types/FSA'
+import { FSAInput } from '../src/types/FSA/FSA.component'
+import { defaultFSA, FSA } from '../src/types/FSA/type'
+
 
 const tub = new FSAResponseAreaTub()
 
 function Sandbox() {
   const [answer, setAnswer] =
-    useState<IModularResponseSchema['answer']>(null)
+    useState<FSA>(defaultFSA)
 
-  const [allowSave, setAllowSave] = useState(true)
+  const [, setAllowSave] = useState(true)
 
   return (
     <>
       <h2>Input</h2>
-      <tub.InputComponent
-        config={{}}
+      <FSAInput
         answer={answer}
-        handleChange={setAnswer}
-        handleSubmit={() => console.log('submit')}
-        handleDraftSave={() => console.log('draft save')}
-        displayMode="normal"
-        hasPreview
+        onChange={(val) => console.log("wizard change", val)}
       />
 
       <hr />
 
       <h2>Wizard</h2>
-      <tub.WizardComponent
-        handleChange={(val) => console.log('wizard change', val)}
-        setAllowSave={setAllowSave}
-      />
     </>
   )
 }
