@@ -14,7 +14,8 @@
     "ci": "run-p format lint typecheck",
     "fix": "run-s format:fix lint:fix",
     "preview": "vite preview",
-    "dev": "run-p build:watch preview"
+    "dev": "run-p build:watch preview",
+    "dev:fsa": "vite"
   },
   "dependencies": {
     "@date-io/date-fns": "^2.13.2",
@@ -43,9 +44,10 @@
     "next": "^14.2.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-katex": "^3.0.1",
     "react-hook-form": "^7.31.2",
+    "react-katex": "^3.0.1",
     "react-query": "^3.39.0",
+    "reactflow": "^11.11.4",
     "tldraw": "^3.13.1",
     "tss-react": "^3.7.0",
     "zod": "^3.14.4"
@@ -66,11 +68,11 @@
     "@types/shuffle-seed": "^1.1.0",
     "@vitejs/plugin-react": "^4.5.2",
     "eslint": "^9.3.0",
-    "eslint-plugin-react": "^7.34.2",
-    "eslint-plugin-react-hooks": "^4.6.2",
     "eslint-config-prettier": "^9.1.0",
     "eslint-import-resolver-typescript": "^3.6.3",
     "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-react": "^7.34.2",
+    "eslint-plugin-react-hooks": "^4.6.2",
     "globals": "^16.2.0",
     "npm-run-all": "^4.1.5",
     "prettier": "^3.3.3",

@@ -2,6 +2,10 @@
 
 Develop local TypeScript code to create custom response area types, and see them previewed live in the main application. When they're ready, provide your code to the Lambda Feedback team, who will consider including it in the main application after (human) review.
 
+## FSA Response Section
+
+please refer to [FSA.md](./FSA.md)
+
 ## Overview
 
 To create a new response area type, you'll need to:

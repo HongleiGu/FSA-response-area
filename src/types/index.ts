@@ -3,6 +3,7 @@ import { z } from 'zod'
 
 import { CodeResponseAreaTub } from './Code'
 import { EssayResponseAreaTub } from './Essay'
+import { FSAResponseAreaTub } from './FSA'
 import { MatrixResponseAreaTub } from './Matrix'
 import { MultipleChoiceResponseAreaTub } from './MultipleChoice'
 import { NumberResponseAreaTub } from './NumberInput'
@@ -25,6 +26,7 @@ export const supportedResponseTypes = [
   'ESSAY',
   'CODE',
   'MILKDOWN',
+  'FSA'
 ]
 
 if (typeof window !== 'undefined') {
@@ -98,6 +100,8 @@ const createReponseAreaTub = (type: string): ResponseAreaTub => {
       return new EssayResponseAreaTub()
     case 'CODE':
       return new CodeResponseAreaTub()
+    case 'FSA':
+      return new FSAResponseAreaTub()
     case 'VOID':
       return new VoidResponseAreaTub()
     default:
