@@ -12,7 +12,8 @@ import ReactFlow, {
 } from 'reactflow';
 
 import 'reactflow/dist/style.css';
-import { FSA } from './type';
+import { TeacherParamsPanel } from './components/TeacherPanel';
+import { convertToBackendFSA, DEFAULT_EVAL_PARAMS, EvalParams, FSA } from './type';
 
 import { makeStyles } from '@styles';
 
@@ -76,6 +77,7 @@ const useLocalStyles = makeStyles()((theme) => ({
     flexGrow: 1,
     display: 'flex',
     flexDirection: 'column',
+    position: 'relative'
   },
   toolbar: {
     padding: theme.spacing(1),
@@ -111,15 +113,56 @@ const useLocalStyles = makeStyles()((theme) => ({
   acceptNode: {
     boxShadow: '0 0 0 4px #fff, 0 0 0 6px #333',
   },
+  teacherPanel: {
+    position: 'absolute',
+    top: theme.spacing(1.5),
+    right: theme.spacing(1.5),
+    width: 300,
+    maxHeight: '80%',            // 👈 cap height
+    overflowY: 'auto',           // 👈 scroll when needed
+    backgroundColor: '#fafafa',
+    border: '1px solid #ddd',
+    borderRadius: 8,
+    padding: theme.spacing(2),
+    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+    zIndex: 10,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: theme.spacing(1.5),
+  },
+  teacherPanelHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    cursor: 'pointer',
+    userSelect: 'none',
+  },
+
+  chevron: {
+    fontSize: 14,
+    opacity: 0.7,
+  },
 }));
 
 /* -------------------- component -------------------- */
 
 interface FSAInputProps {
-  answer: FSA;
-  onChange: (val: FSA) => void;
+  /** Serialized answer (platform contract) */
+  answer: string;
+  onChange: (val: string) => void;
   isTeacherMode?: boolean;
 }
+
+/**
+ * Internal default FSA used when answer is empty or invalid
+ */
+const EMPTY_FSA: FSA = {
+  states: [],
+  transitions: [],
+  alphabet: [],
+  initial_state: '',
+  accept_states: [],
+};
 
 export const FSAInput: React.FC<FSAInputProps> = ({
   answer,
@@ -127,24 +170,46 @@ export const FSAInput: React.FC<FSAInputProps> = ({
   isTeacherMode,
 }) => {
   const { classes, cx } = useLocalStyles();
+
+  /* -------------------- computed answer -------------------- */
+  /**
+   * Parsed FSA object derived from the serialized answer.
+   * This is the ONLY place JSON.parse happens.
+   */
+  const fsa: FSA = useMemo(() => {
+    if (!answer) return EMPTY_FSA;
+    try {
+      return JSON.parse(answer) as FSA;
+    } catch {
+      return EMPTY_FSA;
+    }
+  }, [answer]);
+
+  /* -------------------- local UI state -------------------- */
+
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+  const [evalParams, setEvalParams] = useState<EvalParams>(DEFAULT_EVAL_PARAMS);
+  const [teacherPanelOpen, setTeacherPanelOpen] = useState(true);
 
-  useEffect(() => { 
-    // import the css, since the import 'reactflow/dist/style.css'; dont seems to work 
-    // the css is on the cdn anyway 
-    const linkId = 'react-flow-css'; 
-    if (!document.getElementById(linkId)) { 
-      const link = document.createElement('link'); 
-      link.id = linkId; link.rel = 'stylesheet'; 
-      link.href = 'https://cdn.jsdelivr.net/npm/reactflow@11.10.4/dist/style.css'; 
-      // Use a CDN fallback 
-      document.head.appendChild(link); 
-    } 
+  /* -------------------- CSS fallback -------------------- */
+
+  useEffect(() => {
+    const linkId = 'react-flow-css';
+    if (!document.getElementById(linkId)) {
+      const link = document.createElement('link');
+      link.id = linkId;
+      link.rel = 'stylesheet';
+      link.href =
+        'https://cdn.jsdelivr.net/npm/reactflow@11.10.4/dist/style.css';
+      document.head.appendChild(link);
+    }
   }, []);
 
+  /* -------------------- initial graph -------------------- */
+
   const initialEdges: Edge[] = useMemo(() => {
-    return (answer.transitions || []).reduce((acc: Edge[], tStr: string) => {
+    return (fsa.transitions || []).reduce((acc: Edge[], tStr: string) => {
       const [from, symbol, to] = tStr.split('|');
       if (from && symbol && to) {
         acc.push({
@@ -157,45 +222,69 @@ export const FSAInput: React.FC<FSAInputProps> = ({
       }
       return acc;
     }, []);
-  }, [answer.transitions]);
+  }, [fsa.transitions]);
 
   const initialNodes: Node[] = useMemo(
     () =>
-      answer.states.map((s, i) => ({
+      fsa.states.map((s, i) => ({
         id: s,
         data: { label: s },
         position: { x: i * 120 + 50, y: 150 },
         className: cx(
           classes.node,
-          s === answer.initial_state && classes.initialNode,
-          answer.accept_states.includes(s) && classes.acceptNode,
+          s === fsa.initial_state && classes.initialNode,
+          fsa.accept_states.includes(s) && classes.acceptNode,
         ),
       })),
-    [answer.states, answer.initial_state, answer.accept_states, classes, cx],
+    [fsa, classes, cx],
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  const selectedNode = useMemo(() => nodes.find((n) => n.id === selectedNodeId), [nodes, selectedNodeId]);
-  const selectedEdge = useMemo(() => edges.find((e) => e.id === selectedEdgeId), [edges, selectedEdgeId]);
+  const selectedNode = useMemo(
+    () => nodes.find((n) => n.id === selectedNodeId),
+    [nodes, selectedNodeId],
+  );
+
+  const selectedEdge = useMemo(
+    () => edges.find((e) => e.id === selectedEdgeId),
+    [edges, selectedEdgeId],
+  );
+
+  /* -------------------- sync helper -------------------- */
+
+  const emitChange = useCallback(
+    (next: FSA) => {
+      onChange(JSON.stringify(next));
+    },
+    [onChange],
+  );
 
   const syncChanges = useCallback(
     (currentNodes: Node[], currentEdges: Edge[]) => {
-      onChange({
-        ...answer,
+      emitChange({
+        ...fsa,
         states: currentNodes.map((n) => n.id),
-        transitions: currentEdges.map((e) => `${e.source}|${e.label || 'ε'}|${e.target}`),
-        alphabet: Array.from(new Set(currentEdges.map((e) => String(e.label || 'ε')))).filter(s => s !== 'ε'),
+        transitions: currentEdges.map(
+          (e) => `${e.source}|${e.label || 'ε'}|${e.target}`,
+        ),
+        alphabet: Array.from(
+          new Set(currentEdges.map((e) => String(e.label || 'ε'))),
+        ).filter((s) => s !== 'ε'),
       });
     },
-    [answer, onChange],
+    [fsa, emitChange],
   );
+
+  /* -------------------- mutations -------------------- */
 
   const deleteSelectedNode = () => {
     if (!selectedNodeId) return;
     const remainingNodes = nodes.filter((n) => n.id !== selectedNodeId);
-    const remainingEdges = edges.filter((e) => e.source !== selectedNodeId && e.target !== selectedNodeId);
+    const remainingEdges = edges.filter(
+      (e) => e.source !== selectedNodeId && e.target !== selectedNodeId,
+    );
     setNodes(remainingNodes);
     setEdges(remainingEdges);
     syncChanges(remainingNodes, remainingEdges);
@@ -213,13 +302,12 @@ export const FSAInput: React.FC<FSAInputProps> = ({
   const onConnect = useCallback(
     (params: Connection) => {
       if (!params.source || !params.target) return;
-      const symbol = `tran-${Date.now()}`
       const newEdge: Edge = {
         ...params,
         id: `edge-${Date.now()}`,
         source: params.source,
         target: params.target,
-        label: symbol,
+        label: `tran-${Date.now()}`,
         markerEnd: { type: MarkerType.ArrowClosed },
       };
       setEdges((eds) => {
@@ -228,11 +316,20 @@ export const FSAInput: React.FC<FSAInputProps> = ({
         return updated;
       });
     },
-    [nodes, syncChanges, setEdges],
+    [nodes, syncChanges],
   );
 
-  // Prevent backspace in input from deleting node/edge in React Flow
   const stopPropagation = (e: React.KeyboardEvent) => e.stopPropagation();
+
+  const updateEvalParam = <K extends keyof EvalParams>(
+    key: K,
+    value: EvalParams[K],
+  ) => {
+    setEvalParams((prev) => ({ ...prev, [key]: value }));
+  };
+
+
+  /* -------------------- render -------------------- */
 
   return (
     <div className={classes.container}>
@@ -249,13 +346,17 @@ export const FSAInput: React.FC<FSAInputProps> = ({
                 onKeyDown={stopPropagation}
                 onChange={(e) => {
                   const newId = e.target.value.trim();
-                  if (!newId || nodes.some(n => n.id === newId)) return;
+                  if (!newId || nodes.some((n) => n.id === newId)) return;
                   const oldId = selectedNode.id;
-                  const updatedNodes = nodes.map(n => n.id === oldId ? { ...n, id: newId, data: { label: newId } } : n);
-                  const updatedEdges = edges.map(e => ({
-                    ...e,
-                    source: e.source === oldId ? newId : e.source,
-                    target: e.target === oldId ? newId : e.target
+                  const updatedNodes = nodes.map((n) =>
+                    n.id === oldId
+                      ? { ...n, id: newId, data: { label: newId } }
+                      : n,
+                  );
+                  const updatedEdges = edges.map((ed) => ({
+                    ...ed,
+                    source: ed.source === oldId ? newId : ed.source,
+                    target: ed.target === oldId ? newId : ed.target,
                   }));
                   setNodes(updatedNodes);
                   setEdges(updatedEdges);
@@ -264,26 +365,17 @@ export const FSAInput: React.FC<FSAInputProps> = ({
                 }}
               />
             </div>
+
             <div className={classes.checkboxRow}>
               <input
                 type="checkbox"
-                checked={answer.initial_state === selectedNode.id}
-                onChange={(e) => {
-                  if (e.target.checked) {
-                    // Only one initial state allowed
-                    onChange({
-                      ...answer,
-                      initial_state: selectedNode.id,
-                    });
-                  } else {
-                    if (answer.initial_state === selectedNode.id){
-                      onChange({
-                        ...answer,
-                        initial_state: '',
-                      });
-                    }
-                  }
-                }}
+                checked={fsa.initial_state === selectedNode.id}
+                onChange={(e) =>
+                  emitChange({
+                    ...fsa,
+                    initial_state: e.target.checked ? selectedNode.id : '',
+                  })
+                }
               />
               <label>Initial State</label>
             </div>
@@ -291,23 +383,27 @@ export const FSAInput: React.FC<FSAInputProps> = ({
             <div className={classes.checkboxRow}>
               <input
                 type="checkbox"
-                checked={answer.accept_states.includes(selectedNode.id)}
-                onChange={(e) => {
-                  const isChecked = e.target.checked;
-
-                  onChange({
-                    ...answer,
-                    accept_states: isChecked
-                      ? [...answer.accept_states, selectedNode.id]
-                      : answer.accept_states.filter(
+                checked={fsa.accept_states.includes(selectedNode.id)}
+                onChange={(e) =>
+                  emitChange({
+                    ...fsa,
+                    accept_states: e.target.checked
+                      ? [...fsa.accept_states, selectedNode.id]
+                      : fsa.accept_states.filter(
                           (s) => s !== selectedNode.id,
                         ),
-                  });
-                }}
+                  })
+                }
               />
               <label>Accepting State</label>
             </div>
-            <button className={classes.deleteButton} onClick={deleteSelectedNode}>Delete State</button>
+
+            <button
+              className={classes.deleteButton}
+              onClick={deleteSelectedNode}
+            >
+              Delete State
+            </button>
           </>
         )}
 
@@ -320,37 +416,88 @@ export const FSAInput: React.FC<FSAInputProps> = ({
                 value={String(selectedEdge.label || '')}
                 onKeyDown={stopPropagation}
                 onChange={(e) => {
-                  const updatedEdges = edges.map(ed => ed.id === selectedEdgeId ? { ...ed, label: e.target.value } : ed);
+                  const updatedEdges = edges.map((ed) =>
+                    ed.id === selectedEdgeId
+                      ? { ...ed, label: e.target.value }
+                      : ed,
+                  );
                   setEdges(updatedEdges);
                   syncChanges(nodes, updatedEdges);
                 }}
               />
             </div>
-            <button className={classes.deleteButton} onClick={deleteSelectedEdge}>Delete Transition</button>
+            <button
+              className={classes.deleteButton}
+              onClick={deleteSelectedEdge}
+            >
+              Delete Transition
+            </button>
           </>
         )}
 
-        {!selectedNode && !selectedEdge && <div style={{ color: '#999' }}>Select an element to edit</div>}
+        {!selectedNode && !selectedEdge && (
+          <div style={{ color: '#999' }}>Select an element to edit</div>
+        )}
       </div>
 
       <div className={classes.flowWrapper}>
-        <div className={classes.toolbar}>
-          <button className={classes.addButton} onClick={() => {
-            const id = `node-${Date.now()}`;
-            const newNode = { id, data: { label: id }, position: { x: 50, y: 50 }, className: classes.node };
-            setNodes([...nodes, newNode]);
-            syncChanges([...nodes, newNode], edges);
-          }}>+ Add State</button>
+      {isTeacherMode && (
+        <div className={classes.teacherPanel}>
+          <div
+            className={classes.teacherPanelHeader}
+            onClick={() => setTeacherPanelOpen((o) => !o)}
+          >
+            <div className={classes.panelTitle}>Evaluation Parameters</div>
+            <span className={classes.chevron}>
+              {teacherPanelOpen ? '▾' : '▸'}
+            </span>
+          </div>
+
+          {teacherPanelOpen && (
+            <TeacherParamsPanel
+              currentFSA={fsa}
+              evalParams={evalParams}
+              setEvalParams={setEvalParams}
+              classes={classes}
+            />
+          )}
         </div>
+      )}
+
+        <div className={classes.toolbar}>
+          <button
+            className={classes.addButton}
+            onClick={() => {
+              const id = `node-${Date.now()}`;
+              const newNode = {
+                id,
+                data: { label: id },
+                position: { x: 50, y: 50 },
+                className: classes.node,
+              };
+              setNodes([...nodes, newNode]);
+              syncChanges([...nodes, newNode], edges);
+            }}
+          >
+            + Add State
+          </button>
+        </div>
+
         <ReactFlow
           nodes={nodes}
           edges={edges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
-          onNodeClick={(_, n) => { setSelectedNodeId(n.id); setSelectedEdgeId(null); }}
-          onEdgeClick={(_, e) => { setSelectedEdgeId(e.id); setSelectedNodeId(null); }}
-          deleteKeyCode={null} // Disables keyboard delete to prevent conflicts
+          onNodeClick={(_, n) => {
+            setSelectedNodeId(n.id);
+            setSelectedEdgeId(null);
+          }}
+          onEdgeClick={(_, e) => {
+            setSelectedEdgeId(e.id);
+            setSelectedNodeId(null);
+          }}
+          deleteKeyCode={null}
         >
           <Background />
           <Controls />
