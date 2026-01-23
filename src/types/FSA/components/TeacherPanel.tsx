@@ -8,6 +8,8 @@ interface TeacherParamsPanelProps {
   setEvalParams: React.Dispatch<React.SetStateAction<EvalParams>>;
   classes: Record<string, string>;
   currentFSA: FSA;
+  referenceAnswer: string
+  setReferenceAnswer: (s: string) => void;
 }
 
 export const TeacherParamsPanel: React.FC<TeacherParamsPanelProps> = ({
@@ -15,48 +17,50 @@ export const TeacherParamsPanel: React.FC<TeacherParamsPanelProps> = ({
   setEvalParams,
   classes,
   currentFSA,
+  referenceAnswer, 
+  setReferenceAnswer
 }) => {
-  const [referenceAnswer, setReferenceAnswer] = useState<string>("");
-  const [evaluationResult, setEvaluationResult] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
+  // const [referenceAnswer, setReferenceAnswer] = useState<string>("");
+  // const [evaluationResult, setEvaluationResult] = useState<any>(null);
+  // const [loading, setLoading] = useState(false);
 
   const update = <K extends keyof EvalParams>(key: K, value: EvalParams[K]) => {
     setEvalParams((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleSubmit = async () => {
-    setLoading(true);
-    try {
-      const responseFSA: FSABackend = convertToBackendFSA(currentFSA);
-      const answerFSA: FSABackend = referenceAnswer
-        ? convertToBackendFSA(JSON.parse(referenceAnswer))
-        : { states: [], alphabet: [], transitions: [], initial_state: "q0", accept_states: [] };
+  // const handleSubmit = async () => {
+  //   setLoading(true);
+  //   try {
+  //     const responseFSA: FSABackend = convertToBackendFSA(currentFSA);
+  //     const answerFSA: FSABackend = referenceAnswer
+  //       ? convertToBackendFSA(JSON.parse(referenceAnswer))
+  //       : { states: [], alphabet: [], transitions: [], initial_state: "q0", accept_states: [] };
 
-      const res = await fetch("http://localhost:8080/evaluate/fsa", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          response: responseFSA,
-          answer: answerFSA,
-          params: {
-            ...evalParams,
-            is_latex: false,
-            simplify: false,
-            symbols: {}
-          }
-        }),
-      });
+  //     const res = await fetch("http://localhost:8080/evaluate/fsa", {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({
+  //         response: responseFSA,
+  //         answer: answerFSA,
+  //         params: {
+  //           ...evalParams,
+  //           is_latex: false,
+  //           simplify: false,
+  //           symbols: {}
+  //         }
+  //       }),
+  //     });
 
-      const data = await res.json();
-      setEvaluationResult(data);
-      console.log("Evaluation result:", data);
-    } catch (err) {
-      console.error("Evaluation failed:", err);
-      setEvaluationResult({ error: (err as Error).message });
-    } finally {
-      setLoading(false);
-    }
-  };
+  //     const data = await res.json();
+  //     setEvaluationResult(data);
+  //     console.log("Evaluation result:", data);
+  //   } catch (err) {
+  //     console.error("Evaluation failed:", err);
+  //     setEvaluationResult({ error: (err as Error).message });
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -151,7 +155,7 @@ export const TeacherParamsPanel: React.FC<TeacherParamsPanelProps> = ({
         />
       </div>
 
-      {/* Submit button */}
+      {/* Submit button
       <button
         style={{
           marginTop: 12,
@@ -168,7 +172,6 @@ export const TeacherParamsPanel: React.FC<TeacherParamsPanelProps> = ({
         {loading ? "Submitting..." : "Submit FSA"}
       </button>
 
-      {/* Evaluation result display */}
       {evaluationResult && (
         <pre
           style={{
@@ -180,7 +183,7 @@ export const TeacherParamsPanel: React.FC<TeacherParamsPanelProps> = ({
         >
           {JSON.stringify(evaluationResult, null, 2)}
         </pre>
-      )}
+      )} */}
     </div>
   );
 };

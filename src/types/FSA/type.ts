@@ -103,3 +103,102 @@ export const convertToBackendFSA = (frontendFSA: Partial<FSA>): FSABackend => {
     accept_states,
   };
 };
+
+// evaluation-types.ts
+
+export type Severity = "error" | "warning" | "info";
+
+export type ElementType =
+  | "state"
+  | "transition"
+  | "initial_state"
+  | "accept_state"
+  | "alphabet_symbol";
+
+export interface ElementHighlight {
+  type: ElementType;
+  state_id?: string;
+  from_state?: string;
+  to_state?: string;
+  symbol?: string;
+}
+
+export enum ErrorCode {
+  INVALID_STATE = "INVALID_STATE",
+  INVALID_INITIAL = "INVALID_INITIAL",
+  INVALID_ACCEPT = "INVALID_ACCEPT",
+  INVALID_SYMBOL = "INVALID_SYMBOL",
+  INVALID_TRANSITION_SOURCE = "INVALID_TRANSITION_SOURCE",
+  INVALID_TRANSITION_DEST = "INVALID_TRANSITION_DEST",
+  INVALID_TRANSITION_SYMBOL = "INVALID_TRANSITION_SYMBOL",
+  MISSING_TRANSITION = "MISSING_TRANSITION",
+  DUPLICATE_TRANSITION = "DUPLICATE_TRANSITION",
+  UNREACHABLE_STATE = "UNREACHABLE_STATE",
+  DEAD_STATE = "DEAD_STATE",
+  WRONG_AUTOMATON_TYPE = "WRONG_AUTOMATON_TYPE",
+  NOT_DETERMINISTIC = "NOT_DETERMINISTIC",
+  NOT_COMPLETE = "NOT_COMPLETE",
+  NOT_MINIMAL = "NOT_MINIMAL",
+  LANGUAGE_MISMATCH = "LANGUAGE_MISMATCH",
+  TEST_CASE_FAILED = "TEST_CASE_FAILED",
+  EMPTY_STATES = "EMPTY_STATES",
+  EMPTY_ALPHABET = "EMPTY_ALPHABET",
+  EVALUATION_ERROR = "EVALUATION_ERROR",
+}
+
+export interface ValidationError {
+  message: string;
+  code: ErrorCode;
+  severity: Severity;
+  highlight?: ElementHighlight;
+  suggestion?: string;
+}
+
+export interface TestResult {
+  input: string;
+  expected: boolean;
+  actual: boolean;
+  passed: boolean;
+  trace?: string[];
+}
+
+export interface StructuralInfo {
+  is_deterministic: boolean;
+  is_complete: boolean;
+  num_states: number;
+  num_transitions: number;
+  unreachable_states: string[];
+  dead_states: string[];
+}
+
+export interface LanguageComparison {
+  are_equivalent: boolean;
+  counterexample?: string;
+  counterexample_type?: "should_accept" | "should_reject";
+}
+
+export interface FSAFeedback {
+  summary: string;
+  errors: ValidationError[];
+  warnings: ValidationError[];
+  structural?: StructuralInfo;
+  language?: LanguageComparison;
+  test_results: TestResult[];
+  hints: string[];
+}
+
+// export interface FSA {
+//   states: string[];
+//   alphabet: string[];
+//   transitions: { from_state: string; to_state: string; symbol: string }[];
+//   initial_state: string;
+//   accept_states: string[];
+// }
+
+export interface Result {
+  is_correct: boolean;
+  feedback: string;
+  score?: number; // 0.0 - 1.0
+  fsa_feedback?: FSAFeedback;
+  input_data?: FSA; // dev/debug only
+}
