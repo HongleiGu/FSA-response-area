@@ -7,7 +7,6 @@ interface FSAFeedbackPanelProps {
 }
 
 export function FSAFeedbackPanel({ feedback }: FSAFeedbackPanelProps) {
-  console.log(feedback)
   const parsed = useMemo(() => FSAFeedbackSchema.safeParse(feedback), [feedback])
   if (!feedback || !parsed.success) {
     console.log(parsed.error?.message)

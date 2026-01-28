@@ -51,25 +51,22 @@ public InputComponent = (props: BaseResponseAreaProps): JSX.Element => {
   // }, [props.feedback?.feedback])
 
   return (
-    <>
-      <p>feedback: {props.feedback?.feedback}</p>
-      <FSAInput
-        {...props}
-        feedback={(() => {
-          const raw = props.feedback?.feedback
-          if (!raw) return {}
-          try {
-            // split by <br> and take the second part, trim whitespace
-            const jsonPart = raw.split('<br>')[1]?.trim() ?? '{}'
-            return JSON.parse(jsonPart)
-          } catch {
-            return {} // fallback to empty object if parsing fails
-          }
-        })()}
-        answer={validAnswer}
-        handleChange={(val: FSA) => props.handleChange(val)}
-      />
-    </>
+    <FSAInput
+      {...props}
+      feedback={(() => {
+        const raw = props.feedback?.feedback
+        if (!raw) return {}
+        try {
+          // split by <br> and take the second part, trim whitespace
+          const jsonPart = raw.split('<br>')[1]?.trim() ?? '{}'
+          return JSON.parse(jsonPart)
+        } catch {
+          return {} // fallback to empty object if parsing fails
+        }
+      })()}
+      answer={validAnswer}
+      handleChange={(val: FSA) => props.handleChange(val)}
+    />
   )
 }
 
@@ -79,23 +76,20 @@ public InputComponent = (props: BaseResponseAreaProps): JSX.Element => {
     props: BaseResponseAreaWizardProps,
   ): JSX.Element => {
     return (
-      <>
-        <p>answer: {JSON.stringify(this.answer)}    config: {JSON.stringify(this.config)}</p>
-        <FSAInput
-          {...props}
-          feedback={null} // the wizard should not have feedback
-          answer={this.answer} // Guaranteed defined
-          handleChange={(val: FSA): void => {
-            this.answer = val
-            console.log('Wizard val:', val)
-            props.handleChange({
-              responseType: this.responseType,
-              answer: val,
-              config: this.config as unknown as Record<string, string | number | boolean | null>
-            })
-          }}
-        />
-      </>
+      <FSAInput
+        {...props}
+        feedback={null} // the wizard should not have feedback
+        answer={this.answer} // Guaranteed defined
+        handleChange={(val: FSA): void => {
+          this.answer = val
+          console.log('Wizard val:', val)
+          props.handleChange({
+            responseType: this.responseType,
+            answer: val,
+            config: this.config as unknown as Record<string, string | number | boolean | null>
+          })
+        }}
+      />
     )
   }
 }
