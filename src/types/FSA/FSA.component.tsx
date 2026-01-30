@@ -16,7 +16,7 @@ interface FSAInputProps {
 export const FSAInput: React.FC<FSAInputProps> = ({
   answer,
   handleChange,
-  feedback
+  feedback,
 }) => {
   const { classes } = useLocalStyles()
 
@@ -38,6 +38,7 @@ export const FSAInput: React.FC<FSAInputProps> = ({
       container: containerRef.current,
       layout: { name: 'preset' },
       style: [
+        // ---------------- Nodes ----------------
         {
           selector: 'node',
           style: {
@@ -51,6 +52,33 @@ export const FSAInput: React.FC<FSAInputProps> = ({
             'border-color': '#555',
           },
         },
+
+        {
+          selector: 'node.initial',
+          style: {
+            'border-width': 3,
+            'border-color': '#1976d2',
+          },
+        },
+
+        {
+          selector: 'node.accept',
+          style: {
+            'border-style': 'double',
+            'border-width': 4,
+          },
+        },
+
+        {
+          selector: 'node.error-highlight',
+          style: {
+            'background-color': '#ffebee',
+            'border-color': '#d32f2f',
+            'border-width': 4,
+          },
+        },
+
+        // ---------------- Edges ----------------
         {
           selector: 'edge',
           style: {
@@ -62,6 +90,16 @@ export const FSAInput: React.FC<FSAInputProps> = ({
             'text-background-color': '#fff',
             'text-background-opacity': 1,
             'text-background-padding': '3px',
+          },
+        },
+
+        {
+          selector: 'edge.error-highlight',
+          style: {
+            'line-color': '#d32f2f',
+            'target-arrow-color': '#d32f2f',
+            'line-style': 'dashed',
+            width: 3,
           },
         },
       ],
@@ -78,6 +116,7 @@ export const FSAInput: React.FC<FSAInputProps> = ({
 
     const tapNode = (e: cytoscape.EventObject): void => {
       const node = e.target as NodeSingular
+
       if (drawMode) {
         if (!fromNode) {
           setFromNode(node.id())
@@ -124,17 +163,19 @@ export const FSAInput: React.FC<FSAInputProps> = ({
     if (!cy) return
 
     const fsa: FSA = {
-      states: cy.nodes().map((n) => n.id()),
-      transitions: cy.edges().map(
+      states: cy.nodes()?.map((n) => n.id()),
+      transitions: cy.edges()?.map(
         (e) =>
           `${e.source().id()}|${e.data('label') || config.epsilon_symbol}|${e.target().id()}`,
       ),
       initial_state: answer.initial_state,
       accept_states: answer.accept_states,
-      alphabet: Array.from(new Set(cy.edges().map((e) => String(e.data('label'))))),
+      alphabet: Array.from(
+        new Set(cy.edges().map((e) => String(e.data('label')))),
+      ),
     }
 
-    handleChange(fsa) // Only FSA, not config
+    handleChange(fsa)
   }
 
   /* -------------------- add state -------------------- */
@@ -146,11 +187,87 @@ export const FSAInput: React.FC<FSAInputProps> = ({
     cy.add({
       group: 'nodes',
       data: { id, displayLabel: id },
-      position: { x: 100 + Math.random() * 300, y: 100 + Math.random() * 300 },
+      position: {
+        x: 100 + Math.random() * 300,
+        y: 100 + Math.random() * 300,
+      },
     })
 
     syncToBackend()
   }
+
+  /* -------------------- apply initial / accept styling -------------------- */
+  useEffect(() => {
+    const cy = cyRef.current
+    if (!cy) return
+
+    cy.nodes().removeClass('initial accept')
+
+    if (answer.initial_state) {
+      cy.$id(answer.initial_state).addClass('initial')
+    }
+
+    for (const id of answer.accept_states) {
+      cy.$id(id).addClass('accept')
+    }
+  }, [answer.initial_state, answer.accept_states])
+
+  /* -------------------- apply feedback highlights -------------------- */
+  useEffect(() => {
+    const cy = cyRef.current
+    if (!cy) return
+
+    cy.nodes().removeClass('error-highlight')
+    cy.edges().removeClass('error-highlight')
+
+    if (!feedback || !feedback.errors) return
+
+    const highlights = feedback.errors
+      .map((e) => e.highlight)
+      .filter(Boolean)
+
+    for (const h of highlights) {
+      if (!h) continue
+
+      switch (h.type) {
+        case 'state':
+        case 'initial_state':
+        case 'accept_state': {
+          if (h.state_id) {
+            cy.$id(h.state_id).addClass('error-highlight')
+          }
+          break
+        }
+
+        case 'transition': {
+          cy.edges()
+            .filter((e) => {
+              const fromOk = h.from_state
+                ? e.source().id() === h.from_state
+                : true
+              const toOk = h.to_state
+                ? e.target().id() === h.to_state
+                : true
+              const symOk = h.symbol
+                ? e.data('label') === h.symbol
+                : true
+              return fromOk && toOk && symOk
+            })
+            .addClass('error-highlight')
+          break
+        }
+
+        case 'alphabet_symbol': {
+          if (h.symbol) {
+            cy.edges()
+              .filter((e) => e.data('label') === h.symbol)
+              .addClass('error-highlight')
+          }
+          break
+        }
+      }
+    }
+  }, [feedback])
 
   return (
     <div className={classes.container}>

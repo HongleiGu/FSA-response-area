@@ -18,6 +18,7 @@ export const useLocalStyles = makeStyles()((theme) => ({
     display: 'flex',
     flexDirection: 'column',
     gap: theme.spacing(2),
+    overflowY: 'auto'
   },
 
   floatingConfig: {

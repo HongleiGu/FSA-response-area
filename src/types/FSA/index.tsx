@@ -21,7 +21,7 @@ export class FSAResponseAreaTub extends ResponseAreaTub {
   // private feedback: FSAFeedback | null = null
 
   public readonly delegateFeedback = false // we want to manage our own feedback
-  public readonly delegateLivePreview = false // we want live previews
+  public readonly delegateLivePreview = true// we want live previews
 
   initWithConfig = (config: any) => { 
       this.config = {
@@ -30,7 +30,7 @@ export class FSAResponseAreaTub extends ResponseAreaTub {
       }
     } 
     
-  customCheck = () => {} // will set this up later
+  // customCheck = () => {} // will set this up later
 
   /* -------------------- Input -------------------- */
 
