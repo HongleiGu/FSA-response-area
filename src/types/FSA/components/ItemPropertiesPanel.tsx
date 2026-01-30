@@ -26,6 +26,8 @@ interface ItemPropertiesPanelProps {
 
   syncToBackend: () => void
   feedback: FSAFeedback | null
+  previewText?: string | null
+  previewIsLoading?: boolean
 }
 
 export default function ItemPropertiesPanel({
@@ -42,7 +44,9 @@ export default function ItemPropertiesPanel({
   answer,
   handleChange,
   syncToBackend,
-  feedback
+  feedback,
+  previewText,
+  previewIsLoading,
 }: ItemPropertiesPanelProps): JSX.Element {
   return (
     <div className={classes.panel}>
@@ -158,6 +162,26 @@ export default function ItemPropertiesPanel({
           Delete Selected
         </button>
       )}
+      {previewIsLoading ? (
+        <div style={{ opacity: 0.7, fontStyle: 'italic' }}>Previewing…</div>
+      ) : null}
+      {previewText ? (
+        <div
+          style={{
+            whiteSpace: 'pre-wrap',
+            fontSize: 12,
+            lineHeight: 1.35,
+            padding: 8,
+            borderRadius: 6,
+            background: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            maxHeight: 160,
+            overflowY: 'auto',
+          }}
+        >
+          {previewText}
+        </div>
+      ) : null}
       <FSAFeedbackPanel
         feedback={feedback}
       />
