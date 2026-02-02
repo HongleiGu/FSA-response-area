@@ -1,7 +1,7 @@
 import type { Core, NodeSingular, EdgeSingular } from 'cytoscape'
 import React from 'react'
 
-import { FSA, FSAFeedback } from '../type'
+import { CheckPhase, FSA, FSAFeedback } from '../type'
 
 import { FSAFeedbackPanel } from './FSAFeedbackPanel'
 
@@ -26,6 +26,8 @@ interface ItemPropertiesPanelProps {
 
   syncToBackend: () => void
   feedback: FSAFeedback | null
+  previewFeedback: FSAFeedback | null
+  phase: CheckPhase
 }
 
 export default function ItemPropertiesPanel({
@@ -42,7 +44,9 @@ export default function ItemPropertiesPanel({
   answer,
   handleChange,
   syncToBackend,
-  feedback
+  feedback,
+  previewFeedback,
+  phase
 }: ItemPropertiesPanelProps): JSX.Element {
   return (
     <div className={classes.panel}>
@@ -160,6 +164,8 @@ export default function ItemPropertiesPanel({
       )}
       <FSAFeedbackPanel
         feedback={feedback}
+        // previewFeedback={previewFeedback}
+        phase={phase}
       />
     </div>
   )

@@ -11,17 +11,10 @@ export const fsaAnswerSchema = z.object({
   transitions: z.array(z.string()), 
   initial_state: z.string(),
   accept_states: z.array(z.string()),
+  config: z.string()
 });
 
 export type FSA = z.infer<typeof fsaAnswerSchema>;
-
-export const defaultFSA: FSA = {
-  states: [],
-  alphabet: [],
-  transitions: [],
-  initial_state: '',
-  accept_states: []
-};
 
 export const fsaConfigSchema = z.object({
   evaluation_mode: z.enum(['strict', 'lenient', 'partial']).optional(),
@@ -127,7 +120,7 @@ export const ValidationErrorSchema = z.object({
   code: ErrorCodeSchema,
   severity: ValidationSeveritySchema.default("error"),
   highlight: ElementHighlightSchema.nullable().optional(),
-  suggestion: z.string().optional(),
+  suggestion: z.string().nullable().optional(),
 });
 
 /* ===========================
@@ -196,3 +189,19 @@ export type TestResult = z.infer<typeof TestResultSchema>;
 export type StructuralInfo = z.infer<typeof StructuralInfoSchema>;
 export type LanguageComparison = z.infer<typeof LanguageComparisonSchema>;
 export type FSAFeedback = z.infer<typeof FSAFeedbackSchema>;
+
+export enum CheckPhase {
+  Idle = 'IDLE',
+  PreviewError = 'PREVIEW_ERROR',
+  Evaluating = 'EVALUATING', // we never have access to the api call, so this is useless
+  Evaluated = 'EVALUATED',
+}
+
+export const defaultFSA: FSA = {
+  states: [],
+  alphabet: [],
+  transitions: [],
+  initial_state: '',
+  accept_states: [],
+  config: JSON.stringify(DEFAULT_FSA_CONFIG)
+};

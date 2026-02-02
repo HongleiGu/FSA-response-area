@@ -1,18 +1,32 @@
 import React, { useMemo } from 'react'
 
-import { FSAFeedbackSchema, type FSAFeedback } from '../type'
+import {
+  CheckPhase,
+  FSAFeedbackSchema,
+  type FSAFeedback,
+} from '../type'
 
 interface FSAFeedbackPanelProps {
   feedback: FSAFeedback | null
+  phase: CheckPhase
 }
 
-export function FSAFeedbackPanel({ feedback }: FSAFeedbackPanelProps) {
-  const parsed = useMemo(() => FSAFeedbackSchema.safeParse(feedback), [feedback])
+export function FSAFeedbackPanel({
+  feedback,
+  phase,
+}: FSAFeedbackPanelProps) {
+
+  const parsed = useMemo(
+    () => FSAFeedbackSchema.safeParse(feedback),
+    [feedback],
+  )
+
   if (!feedback || !parsed.success) {
-    console.log(parsed.error?.message)
     return (
       <div style={{ opacity: 0.6, fontStyle: 'italic' }}>
-        No feedback yet {parsed.error?.message}
+        {phase === CheckPhase.PreviewError
+          ? 'Preview errors found'
+          : 'No feedback yet'}
       </div>
     )
   }
@@ -21,6 +35,18 @@ export function FSAFeedbackPanel({ feedback }: FSAFeedbackPanelProps) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div
+        style={{
+          padding: 10,
+          borderRadius: 6,
+          background: '#f5f7fa',
+          fontWeight: 600,
+        }}
+      >
+        {
+          phase == CheckPhase.PreviewError ? "Errors in Preview" : "Errors in Evaluation"
+        }
+      </div>
       {/* ================= Summary ================= */}
       {safeFeedback.summary && (
         <div
@@ -38,7 +64,11 @@ export function FSAFeedbackPanel({ feedback }: FSAFeedbackPanelProps) {
       {/* ================= Errors ================= */}
       {safeFeedback.errors.length > 0 && (
         <FeedbackSection
-          title="Errors"
+          title={
+            phase === CheckPhase.PreviewError
+              ? 'Preview Errors'
+              : 'Errors'
+          }
           items={safeFeedback.errors}
           accent="#d32f2f"
         />
@@ -85,12 +115,13 @@ export function FSAFeedbackPanel({ feedback }: FSAFeedbackPanelProps) {
             value={bool(safeFeedback.language.are_equivalent)}
           />
 
-          {!safeFeedback.language.are_equivalent && safeFeedback.language.counterexample && (
-            <KV
-              label="Counterexample"
-              value={`${safeFeedback.language.counterexample} (${safeFeedback.language.counterexample_type})`}
-            />
-          )}
+          {!safeFeedback.language.are_equivalent &&
+            safeFeedback.language.counterexample && (
+              <KV
+                label="Counterexample"
+                value={`${safeFeedback.language.counterexample} (${safeFeedback.language.counterexample_type})`}
+              />
+            )}
         </Section>
       )}
 

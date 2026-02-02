@@ -1,20 +1,22 @@
 import React from 'react'
 
-interface EvaluationConfigPanelProps<T extends Record<string, any>> {
-  config: T
-  setConfig: React.Dispatch<React.SetStateAction<T>>
+import { FSAConfig } from '../type'
+
+interface EvaluationConfigPanelProps {
+  config: FSAConfig
+  setConfig: (config: FSAConfig) => void
   configOpen: boolean
   setConfigOpen: React.Dispatch<React.SetStateAction<boolean>>
   classes: Record<string, string>
 }
 
-export default function EvaluationConfigPanel<T extends Record<string, any>>({
+export default function EvaluationConfigPanel({
   config,
   setConfig,
   configOpen,
   setConfigOpen,
-  classes,
-}: EvaluationConfigPanelProps<T>) {
+  classes
+}: EvaluationConfigPanelProps) {
   return (
     <div className={classes.floatingConfig}>
       <div
@@ -36,10 +38,10 @@ export default function EvaluationConfigPanel<T extends Record<string, any>>({
                   type="checkbox"
                   checked={value}
                   onChange={(e) =>
-                    setConfig((prev) => ({
-                      ...prev,
+                    setConfig({
+                      ...config,
                       [key]: e.target.checked,
-                    }))
+                    })
                   }
                 />
               ) : typeof value === 'number' ? (
@@ -48,10 +50,10 @@ export default function EvaluationConfigPanel<T extends Record<string, any>>({
                   className={classes.inputField}
                   value={value}
                   onChange={(e) =>
-                    setConfig((prev) => ({
-                      ...prev,
+                    setConfig({
+                      ...config,
                       [key]: Number(e.target.value),
-                    }))
+                    })
                   }
                 />
               ) : (
@@ -59,10 +61,10 @@ export default function EvaluationConfigPanel<T extends Record<string, any>>({
                   className={classes.inputField}
                   value={String(value)}
                   onChange={(e) =>
-                    setConfig((prev) => ({
-                      ...prev,
+                    setConfig({
+                      ...config,
                       [key]: e.target.value,
-                    }))
+                    })
                   }
                 />
               )}
